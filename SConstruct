@@ -108,10 +108,12 @@ env.Depends(library, llama_cpp_install)
 
 # Install deps to bin
 deps_copy = env.Install("bin/{}/".format(env["platform"]), DEPS_PATHS)
+env.Depends(deps_copy, llama_cpp_install)
 
 # Install library and deps to projectdir
 projdir_copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]),
                    [library] + DEPS_PATHS)
+env.Depends(projdir_copy, llama_cpp_install)
 
 default_args = [library, deps_copy, projdir_copy, llama_cpp_install]
 Default(*default_args)
