@@ -1,6 +1,24 @@
-extends Node
+extends SceneTree
 
+func getsecs() -> float:
+	return Time.get_unix_time_from_system()
 
-func _ready() -> void:
-	var example := ExampleClass.new()
-	example.print_type(example)
+func _init() -> void:
+	var llama := GDLlama.new()
+	llama.init("./Qwen3-4B-Q6_K.gguf")
+	llama.submit(0, "<im_start>user\nhello, briefly describe what mohair is<im_end>\n<im_start>assistant\n<think>\n\n</think>\n\n")
+	# llama.submit(0, "<im_start>user\nhello<im_end>\n<im_start>assistant\n<think>\n\n</think>\n\n")
+	var start = getsecs()
+	print("starting at: ", start)
+	while !llama.is_done(0):
+		var now = getsecs()
+		if now - start > 10.0:
+			print("timeout at ", now - start, "!\n")
+			llama.cancel(0)
+			break
+		pass
+	print("finished at: ", getsecs() - start)
+	print("got response: '", llama.get_response(0), "'\n")
+	print("done.")
+	llama.deinit()
+	quit()

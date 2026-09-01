@@ -1,0 +1,26 @@
+[configuration]
+
+entry_symbol = "it_hell_llama_init"
+compatibility_minimum = "4.1"
+reloadable = false
+
+[libraries]
+; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.
+linux.x86_64.debug = "./linux/libit_hell_llama.linux.template_debug.x86_64.so"
+linux.x86_64.release = "./linux/libit_hell_llama.linux.template_release.x86_64.so"
+
+[dependencies]
+linux.x86_64.debug = {
+  "res://bin/linux/libggml-base.so": "",
+  "res://bin/linux/libggml-cpu.so": "",
+  "res://bin/linux/libggml.so": "",
+  "res://bin/linux/libllama-common.so": "",
+  "res://bin/linux/libllama.so": ""
+}
+linux.x86_64.release = {
+  "res://bin/linux/libggml-base.so": "",
+  "res://bin/linux/libggml-cpu.so": "",
+  "res://bin/linux/libggml.so": "",
+  "res://bin/linux/libllama-common.so": "",
+  "res://bin/linux/libllama.so": ""
+}
