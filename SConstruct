@@ -7,7 +7,12 @@ from methods import print_error
 libname = "it_hell_llama"
 projectdir = "project"
 
-localEnv = Environment(tools=["default"], PLATFORM="")
+localEnv = Environment(
+    tools=["default"],
+    PLATFORM="",
+    ENV={
+        'HOME': os.environ.get('HOME'),
+    })
 
 # Build profiles can be used to decrease compile times.
 # You can either specify "disabled_classes", OR
