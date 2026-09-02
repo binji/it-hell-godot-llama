@@ -99,14 +99,15 @@ library = env.SharedLibrary(
 )
 env.Depends(sources, llama_cpp)  # Make sure to install llama.cpp before compiling extension
 
-# Install deps to bin
-deps_copy = env.Install("bin/{}/".format(env["platform"]), DEPS_PATHS)
-env.Depends(deps_copy, llama_cpp)
+defaults = []
+for path in DEPS_PATHS:
+    env.Depends(path, llama_cpp)
+    # Install deps to bin
+    defaults.append(env.Install("bin/{}/".format(env["platform"]), path))
+    # Install deps to projectdir
+    defaults.append(env.Install("{}/bin/{}/".format(projectdir, env["platform"]), path))
 
-# Install library and deps to projectdir
-projdir_copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]),
-                   [library] + DEPS_PATHS)
-env.Depends(projdir_copy, llama_cpp)
+defaults.append(env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library))
 
-default_args = [library, deps_copy, projdir_copy, llama_cpp]
+default_args = [library, llama_cpp] + defaults
 Default(*default_args)
