@@ -14,7 +14,8 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
-	GDREGISTER_CLASS(GDLlama);
+	GDREGISTER_CLASS(Llama);
+	GDREGISTER_CLASS(LlamaInitParams);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {

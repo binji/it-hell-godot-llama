@@ -4,30 +4,78 @@
 
 #define ERROR(fmt, ...) fprintf(stderr, "ERROR: %s:%d:" fmt, __FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__)
 
-#if 0
+#if 1
 #define LOG(fmt, ...) fprintf(stderr, "LOG: " fmt __VA_OPT__(, ) __VA_ARGS__)
 #else
 #define LOG(fmt, ...) (void)0
 #endif
 
-GDLlama::GDLlama() {
+void LlamaInitParams::_bind_methods() {
+	godot::ClassDB::bind_method(D_METHOD("set_model_filename", "model_filename"), &LlamaInitParams::set_model_filename);
+	godot::ClassDB::bind_method(D_METHOD("set_gpu_layers", "gpu_layers"), &LlamaInitParams::set_gpu_layers);
+	godot::ClassDB::bind_method(D_METHOD("set_n_ctx", "n_ctx"), &LlamaInitParams::set_n_ctx);
+	godot::ClassDB::bind_method(D_METHOD("set_temp", "temp"), &LlamaInitParams::set_temp);
+	godot::ClassDB::bind_method(D_METHOD("set_top_p", "top_p"), &LlamaInitParams::set_top_p);
+	godot::ClassDB::bind_method(D_METHOD("set_top_k", "top_k"), &LlamaInitParams::set_top_k);
+	godot::ClassDB::bind_method(D_METHOD("set_min_p", "min_p"), &LlamaInitParams::set_min_p);
+	godot::ClassDB::bind_method(D_METHOD("set_penalty_tokens", "penalty_tokens"), &LlamaInitParams::set_penalty_tokens);
+	godot::ClassDB::bind_method(D_METHOD("set_presence_penalty", "presence_penalty"), &LlamaInitParams::set_presence_penalty);
 }
 
-GDLlama::~GDLlama() {
+void LlamaInitParams::set_model_filename(const String &model_filename) {
+	data.model_filename = model_filename.utf8().ptr();
+}
+
+void LlamaInitParams::set_gpu_layers(int gpu_layers) {
+	data.gpu_layers = gpu_layers;
+}
+
+void LlamaInitParams::set_n_ctx(int n_ctx) {
+	data.n_ctx = n_ctx;
+}
+
+void LlamaInitParams::set_temp(float temp) {
+	data.temp = temp;
+}
+
+void LlamaInitParams::set_top_p(float top_p) {
+	data.top_p = top_p;
+}
+
+void LlamaInitParams::set_top_k(int top_k) {
+	data.top_k = top_k;
+}
+
+void LlamaInitParams::set_min_p(float min_p) {
+	data.min_p = min_p;
+}
+
+void LlamaInitParams::set_penalty_tokens(int penalty_tokens) {
+	data.penalty_tokens = penalty_tokens;
+}
+
+void LlamaInitParams::set_presence_penalty(float presence_penalty) {
+	data.presence_penalty = presence_penalty;
+}
+
+Llama::Llama() {
+}
+
+Llama::~Llama() {
 	deinit();
 }
 
-void GDLlama::thread_callback() {
-  // Wait until model is loaded.
-	std::string model_filename;
+void Llama::thread_callback() {
+	// Wait until init params are given.
+	InitParamsData init_params_data;
 	{
 		std::unique_lock<std::mutex> guard(mtx);
-		if (!model_to_load.has_value()) {
-			model_avail_cv.wait(guard, [this] { return model_to_load.has_value(); });
+		if (!opt_init_params_data.has_value()) {
+			model_avail_cv.wait(guard, [this] { return opt_init_params_data.has_value(); });
 		}
-		model_filename = *model_to_load;
+		init_params_data = *opt_init_params_data;
 	}
-	thread_load_model(model_filename);
+	thread_init(init_params_data);
   LOG("> Model loaded.\n");
 
 	while (1) {
@@ -51,19 +99,19 @@ void GDLlama::thread_callback() {
   LOG("> Thread finished.\n");
 }
 
-void GDLlama::thread_load_model(const std::string &filename) {
+void Llama::thread_init(const InitParamsData &data) {
 	llama_model_params model_params = llama_model_default_params();
-	model_params.n_gpu_layers = 0; // TODO: make configurable?
+	model_params.n_gpu_layers = data.gpu_layers;
 
-	auto *new_model = llama_model_load_from_file(filename.c_str(), model_params);
+	auto *new_model = llama_model_load_from_file(data.model_filename.c_str(), model_params);
 	// TODO: better failure notifications
 	if (!new_model) {
-		ERROR("Failed to load model '%s'\n", filename.c_str());
+		ERROR("Failed to load model '%s'\n", data.model_filename.c_str());
 		return;
 	}
 	const auto *new_vocab = llama_model_get_vocab(new_model);
 
-	const int n_ctx = 32768;
+	const int n_ctx = data.n_ctx;
 	llama_context_params ctx_params = llama_context_default_params();
 	ctx_params.n_ctx = n_ctx;
 	ctx_params.n_batch = n_ctx;
@@ -75,17 +123,19 @@ void GDLlama::thread_load_model(const std::string &filename) {
 	}
 
 	auto *new_sampler = llama_sampler_chain_init(llama_sampler_chain_default_params());
-	llama_sampler_chain_add(new_sampler, llama_sampler_init_temp(0.6f));
-	llama_sampler_chain_add(new_sampler, llama_sampler_init_top_p(0.95f, 0));
-	llama_sampler_chain_add(new_sampler, llama_sampler_init_top_k(20));
-	llama_sampler_chain_add(new_sampler, llama_sampler_init_min_p(0.00f, 0));
+	llama_sampler_chain_add(new_sampler, llama_sampler_init_temp(data.temp));
+	llama_sampler_chain_add(new_sampler, llama_sampler_init_top_p(data.top_p, 0));
+	llama_sampler_chain_add(new_sampler, llama_sampler_init_top_k(data.top_k));
+	llama_sampler_chain_add(new_sampler, llama_sampler_init_min_p(data.min_p, 0));
 	llama_sampler_chain_add(new_sampler, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
 	llama_sampler_chain_add(
-			new_sampler, llama_sampler_init_penalties(llama_vocab_n_tokens(new_vocab),
-													  128, // last n tokens to penalize (0 = disable penalty)
-													  1.0, // must be > 0.0, 1.0 = disabled
-													  0.0, // must be finite, 0.0 = disabled
-													  1.5)); // must be finite, 0.0 = disabled
+			new_sampler,
+			llama_sampler_init_penalties(
+					llama_vocab_n_tokens(new_vocab),
+					data.penalty_tokens, // last n tokens to penalize (0 = disable penalty)
+					1.0, // must be > 0.0, 1.0 = disabled
+					0.0, // must be finite, 0.0 = disabled
+					data.presence_penalty)); // must be finite, 0.0 = disabled
 
 	model = new_model;
 	vocab = new_vocab;
@@ -93,7 +143,7 @@ void GDLlama::thread_load_model(const std::string &filename) {
 	sampler = new_sampler;
 }
 
-void GDLlama::thread_submit(const Request &req) {
+void Llama::thread_submit(const Request &req) {
 	std::string response;
 
 	const bool is_first =
@@ -167,53 +217,57 @@ void GDLlama::thread_submit(const Request &req) {
 	}
 }
 
-void GDLlama::_bind_methods() {
-	godot::ClassDB::bind_method(D_METHOD("init", "model_filename"), &GDLlama::init);
-	godot::ClassDB::bind_method(D_METHOD("deinit"), &GDLlama::deinit);
-	godot::ClassDB::bind_method(D_METHOD("submit", "id", "prompt"), &GDLlama::submit);
-	godot::ClassDB::bind_method(D_METHOD("cancel", "id"), &GDLlama::cancel);
-	godot::ClassDB::bind_method(D_METHOD("is_done", "id"), &GDLlama::is_done);
-	godot::ClassDB::bind_method(D_METHOD("get_response", "id"), &GDLlama::get_response);
+void Llama::_bind_methods() {
+	godot::ClassDB::bind_method(D_METHOD("init", "init_params"), &Llama::init);
+	godot::ClassDB::bind_method(D_METHOD("deinit"), &Llama::deinit);
+	godot::ClassDB::bind_method(D_METHOD("submit", "id", "prompt"), &Llama::submit);
+	godot::ClassDB::bind_method(D_METHOD("cancel", "id"), &Llama::cancel);
+	godot::ClassDB::bind_method(D_METHOD("is_done", "id"), &Llama::is_done);
+	godot::ClassDB::bind_method(D_METHOD("get_response", "id"), &Llama::get_response);
 }
 
-void GDLlama::init(const String &model_filename) {
+void Llama::init(const Ref<LlamaInitParams> &init_params) {
 	if (th) {
-		ERROR("GDLlama already initialized.\n");
+		ERROR("Llama already initialized.\n");
 		return;
 	}
-	th = std::make_unique<std::jthread>(&GDLlama::thread_callback, this);
+	th = std::make_unique<std::jthread>(&Llama::thread_callback, this);
 
-	LOG("Initializing GDLlama with model: '%s'...\n", model_filename.utf8().ptr());
+	LOG("Initializing Llama with model: '%s'...\n", init_params->data.model_filename.c_str());
 	{
 		std::unique_lock guard(mtx);
-		if (model_to_load.has_value()) {
-			ERROR("Model '%s' already loaded.\n", model_to_load->c_str());
+		if (opt_init_params_data.has_value()) {
+			ERROR("Llama already initialized.\n");
 			return;
 		}
-		model_to_load = std::string(model_filename.utf8().ptr());
+		opt_init_params_data = init_params->data;
 	}
 	model_avail_cv.notify_one();
-	LOG("GDLlama initialized.\n");
+	LOG("Llama initialized.\n");
 }
 
-void GDLlama::deinit() {
-	LOG("Deinitializing GDLlama...\n");
+void Llama::deinit() {
+  if (!th) {
+    LOG("Llama already deinitialized.\n");
+    return;
+  }
+	LOG("Deinitializing Llama...\n");
   should_quit = true;
   request_avail_cv.notify_one();
   th->join();
   th.release();
 
-  model_to_load.reset();
+  opt_init_params_data.reset();
   requests.clear();
   responses.clear();
 
 	llama_sampler_free(sampler);
 	llama_free(ctx);
 	llama_model_free(model);
-	LOG("GDLlama deinitialized.\n");
+	LOG("Llama deinitialized.\n");
 }
 
-void GDLlama::submit(int id, const String &prompt) {
+void Llama::submit(int id, const String &prompt) {
 	{
 		std::unique_lock guard(mtx);
 		requests.push_back(std::make_unique<Request>(id, prompt.utf8().ptr()));
@@ -221,7 +275,7 @@ void GDLlama::submit(int id, const String &prompt) {
 	request_avail_cv.notify_one();
 }
 
-void GDLlama::cancel(int id) {
+void Llama::cancel(int id) {
 	LOG("Canceling %d...\n", id);
 	{
 		std::unique_lock guard(mtx);
@@ -237,7 +291,7 @@ void GDLlama::cancel(int id) {
 	}
 }
 
-bool GDLlama::is_done(int id) {
+bool Llama::is_done(int id) {
 	{
 		std::unique_lock guard(mtx);
 		auto iter = std::find_if(requests.begin(), requests.end(), [&](auto &req) {
@@ -247,7 +301,7 @@ bool GDLlama::is_done(int id) {
 	}
 }
 
-String GDLlama::get_response(int id) {
+String Llama::get_response(int id) {
 	std::unique_lock guard(mtx);
 	auto iter = std::find_if(responses.begin(), responses.end(), [&](auto &res) {
 		return res.id == id;
