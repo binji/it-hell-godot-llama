@@ -40,29 +40,22 @@ LLAMA_SHLIB = shlib_name("llama")
 
 llama_cpp_flags = ' '.join("-D"+flag for flag in [
     f"CMAKE_INSTALL_PREFIX={os.path.abspath('.')}/cmake-install",
-    f"LLAMA_BUILD_APP=OFF",
-    f"LLAMA_BUILD_EXAMPLES=OFF",
-    f"LLAMA_BUILD_SERVER=OFF",
-    f"LLAMA_BUILD_TESTS=OFF",
-    f"LLAMA_BUILD_TOOLS=OFF",
-    f"LLAMA_BUILD_UI=OFF",
+    "CMAKE_BUILD_TYPE=Release",
+    "LLAMA_BUILD_APP=OFF",
+    "LLAMA_BUILD_EXAMPLES=OFF",
+    "LLAMA_BUILD_SERVER=OFF",
+    "LLAMA_BUILD_TESTS=OFF",
+    "LLAMA_BUILD_TOOLS=OFF",
+    "LLAMA_BUILD_UI=OFF",
     ])
-llama_cpp_configure = env.Command(
-    source="llama.cpp/CMakeLists.txt",
-    target="cmake-build/CMakeCache.txt",
-    action=f"cmake -S llama.cpp -B cmake-build {llama_cpp_flags}")
-
-llama_cpp_build = env.Command(
-    target=f"cmake-build/lib/{LLAMA_SHLIB}",
-    source="cmake-build/CMakeCache.txt",
-    action="cmake --build cmake-build")
-env.Depends(llama_cpp_build, llama_cpp_configure)
-
-llama_cpp_install = env.Command(
+llama_cpp = env.Command(
     target=f"cmake-install/bin/{LLAMA_SHLIB}",
-    source=f"cmake-build/bin/{LLAMA_SHLIB}",
-    action="cmake --build cmake-build -t install")
-env.Depends(llama_cpp_install, llama_cpp_build)
+    source="llama.cpp/CMakeLists.txt",
+    action=[
+        f"cmake -S llama.cpp -B cmake-build {llama_cpp_flags}",
+        "cmake --build cmake-build",
+        "cmake --build cmake-build -t install"
+    ])
 
 env.Append(CPPPATH=["cmake-install/include"])
 env.Append(LIBPATH=["cmake-install/lib"])
@@ -96,7 +89,7 @@ if env["target"] in ["editor", "template_debug"]:
 # .universal just means "compatible with all relevant arches" so we don't need to key it.
 suffix = env['suffix'].replace(".dev", "").replace(".universal", "")
 
-lib_filename = shlib_name(libname)
+lib_filename = shlib_name(libname, suffix)
 
 env.Append(LIBS=DEPS_NAMES)
 env.Append(LIBPATH=["cmake-install/lib"])
@@ -104,16 +97,16 @@ library = env.SharedLibrary(
     "bin/{}/{}".format(env['platform'], lib_filename),
     source=sources,
 )
-env.Depends(library, llama_cpp_install)
+env.Depends(sources, llama_cpp)  # Make sure to install llama.cpp before compiling extension
 
 # Install deps to bin
 deps_copy = env.Install("bin/{}/".format(env["platform"]), DEPS_PATHS)
-env.Depends(deps_copy, llama_cpp_install)
+env.Depends(deps_copy, llama_cpp)
 
 # Install library and deps to projectdir
 projdir_copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]),
                    [library] + DEPS_PATHS)
-env.Depends(projdir_copy, llama_cpp_install)
+env.Depends(projdir_copy, llama_cpp)
 
-default_args = [library, deps_copy, projdir_copy, llama_cpp_install]
+default_args = [library, deps_copy, projdir_copy, llama_cpp]
 Default(*default_args)
