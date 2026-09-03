@@ -12,6 +12,7 @@ localEnv = Environment(
     PLATFORM="",
     ENV={
         'HOME': os.environ.get('HOME'),
+        'PATH': os.environ.get('PATH'),
     })
 
 # Build profiles can be used to decrease compile times.
