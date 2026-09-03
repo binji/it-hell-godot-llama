@@ -36,35 +36,6 @@ env = localEnv.Clone()
 def shlib_name(baselib, suffix=""):
     return "{}{}{}{}".format(env.subst('$SHLIBPREFIX'), baselib, suffix, env.subst('$SHLIBSUFFIX'))
 
-# llama.cpp
-LLAMA_SHLIB = shlib_name("llama")
-
-llama_cpp_flags = ' '.join("-D"+flag for flag in [
-    f"CMAKE_INSTALL_PREFIX={os.path.abspath('.')}/cmake-install",
-    "CMAKE_BUILD_TYPE=Release",
-    "LLAMA_BUILD_APP=OFF",
-    "LLAMA_BUILD_EXAMPLES=OFF",
-    "LLAMA_BUILD_SERVER=OFF",
-    "LLAMA_BUILD_TESTS=OFF",
-    "LLAMA_BUILD_TOOLS=OFF",
-    "LLAMA_BUILD_UI=OFF",
-    ])
-llama_cpp = env.Command(
-    target=f"cmake-install/bin/{LLAMA_SHLIB}",
-    source="llama.cpp/CMakeLists.txt",
-    action=[
-        f"cmake -S llama.cpp -B cmake-build {llama_cpp_flags}",
-        "cmake --build cmake-build",
-        "cmake --build cmake-build -t install"
-    ])
-
-env.Append(CPPPATH=["cmake-install/include"])
-env.Append(LIBPATH=["cmake-install/lib"])
-
-# Install needed llama.cpp libraries to bin
-DEPS_NAMES =    ["llama", "llama-common", "ggml-base", "ggml-cpu", "ggml"]
-DEPS_VERSIONS = ["0.3.0", "0.3.0",        "0.22.0",    "0.22.0",   "0.22.0"]
-
 # godot-cpp
 if not (os.path.isdir("godot-cpp") and os.listdir("godot-cpp")):
     print_error("""godot-cpp is not available within this folder, as Git submodules haven't been initialized.
@@ -74,6 +45,40 @@ Run the following command to download godot-cpp:
     sys.exit(1)
 
 env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
+
+# llama.cpp
+LLAMA_SHLIB = shlib_name("llama")
+DEPS_NAMES =    ["llama", "llama-common", "ggml-base", "ggml-cpu", "ggml"]
+DEPS_VERSIONS = ["0.3.0", "0.3.0",        "0.22.0",    "0.22.0",   "0.22.0"]
+
+llama_cpp_flags = [
+    f"CMAKE_INSTALL_PREFIX={os.path.abspath('.')}/cmake-install",
+    "CMAKE_BUILD_TYPE=Release",
+    "LLAMA_BUILD_APP=OFF",
+    "LLAMA_BUILD_EXAMPLES=OFF",
+    "LLAMA_BUILD_SERVER=OFF",
+    "LLAMA_BUILD_TESTS=OFF",
+    "LLAMA_BUILD_TOOLS=OFF",
+    "LLAMA_BUILD_UI=OFF",
+]
+if env["platform"] == "windows":
+    llama_cpp_flags.append("GGML_CUDA=ON")
+elif env["platform"] == "linux":
+    llama_cpp_flags.append("GGML_VULKAN=ON")
+
+llama_cpp_flags_str = ' '.join("-D"+flag for flag in llama_cpp_flags)
+llama_cpp = env.Command(
+    target=f"cmake-install/bin/{LLAMA_SHLIB}",
+    source="llama.cpp/CMakeLists.txt",
+    action=[
+        f"cmake -G Ninja -S llama.cpp -B cmake-build {llama_cpp_flags_str}",
+        "cmake --build cmake-build",
+        "cmake --build cmake-build -t install"
+    ])
+
+env.Append(CPPPATH=["cmake-install/include"])
+env.Append(LIBPATH=["cmake-install/lib"])
+
 
 if env["platform"] != "windows":
     env.Append(CXXFLAGS=["-std=c++20"])
@@ -101,6 +106,7 @@ library = env.SharedLibrary(
 )
 env.Depends(sources, llama_cpp)  # Make sure to install llama.cpp before compiling extension
 
+# Install needed llama.cpp libraries to bin
 defaults = []
 for i, name in enumerate(DEPS_NAMES):
     full_version = DEPS_VERSIONS[i]

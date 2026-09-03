@@ -59,6 +59,20 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y gcc-multilib g++-multilib
 
+      # Install CUDA on windows
+      - name: Install CUDA (windows)
+        if: ${{ matrix.target.platform == 'windows' }}
+        uses: Jimver/cuda-toolkit@v0.2.36
+        id: cuda-toolkit
+        with:
+          cuda: '13.2.0'
+
+      # Install vulkan on linux
+      - name: Install Vulkan (linux)
+        if: ${{ matrix.target.platform == 'linux' }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y libvulkan-dev glslc spirv-headers
+
       # Setup dependencies
       - name: Setup godot-cpp
         uses: ./godot-cpp/.github/actions/setup-godot-cpp
