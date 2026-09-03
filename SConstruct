@@ -103,11 +103,11 @@ env.Depends(sources, llama_cpp)  # Make sure to install llama.cpp before compili
 
 defaults = []
 for i, path in enumerate(DEPS_PATHS):
-    env.Depends(path, llama_cpp)
     full_version = DEPS_VERSIONS[i]
     major_version = full_version[0]
     for version in ["", "." + major_version, "." + full_version]:
         path_version = path + version
+        env.Depends(path_version, llama_cpp)
         # Install deps to bin
         defaults.append(env.Install("bin/{}/".format(env["platform"]), path_version))
         # Install deps to projectdir
