@@ -156,7 +156,8 @@ void Llama::thread_submit(const Request &req) {
 	if (llama_tokenize(vocab, req.prompt.c_str(), req.prompt.size(),
 					   prompt_tokens.data(), prompt_tokens.size(), is_first,
 					   true) < 0) {
-		GGML_ABORT("failed to tokenize the prompt\n");
+		ERROR("failed to tokenize the prompt\n");
+		return;
 	}
 
 	// prepare a batch for the prompt
@@ -175,15 +176,14 @@ void Llama::thread_submit(const Request &req) {
 		int n_ctx_used = llama_memory_seq_pos_max(llama_get_memory(ctx), 0) + 1;
 		if (n_ctx_used + batch.n_tokens > n_ctx) {
 			ERROR("context size exceeded\n");
-			exit(0);
+			return;
 		}
 
 		int ret = llama_decode(ctx, batch);
 		if (ret != 0) {
-			GGML_ABORT("failed to decode, ret = %d\n", ret);
+			ERROR("failed to decode, ret = %d\n", ret);
+			return;
 		}
-
-		auto token = llama_get_sampled_token_ith(ctx, -1);
 
 		// sample the next token
 		new_token_id = llama_sampler_sample(sampler, ctx, -1);
@@ -198,7 +198,8 @@ void Llama::thread_submit(const Request &req) {
 		int n =
 				llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf), 0, true);
 		if (n < 0) {
-			GGML_ABORT("failed to convert token to piece\n");
+			ERROR("failed to convert token to piece\n");
+			return;
 		}
 		std::string piece(buf, n);
 #if 1
@@ -209,6 +210,17 @@ void Llama::thread_submit(const Request &req) {
 
 		// prepare the next batch with the sampled token
 		batch = llama_batch_get_one(&new_token_id, 1);
+	}
+
+	// Strip out <think></think> blocks, if any.
+	auto think_start = response.find("<think>");
+	if (think_start != std::string::npos) {
+		auto think_end = response.find("</think>", think_start);
+		if (think_end == std::string::npos) {
+			ERROR("Error parsing <think> XML.");
+			return;
+		}
+		response.erase(think_start + strlen("<think>"), think_end - think_start);
 	}
 
 	{
