@@ -61,7 +61,8 @@ env.Append(CPPPATH=["cmake-install/include"])
 env.Append(LIBPATH=["cmake-install/lib"])
 
 # Install needed llama.cpp libraries to bin
-DEPS_NAMES = ["llama", "llama-common", "ggml-base", "ggml-cpu", "ggml"]
+DEPS_NAMES =    ["llama", "llama-common", "ggml-base", "ggml-cpu", "ggml"]
+DEPS_VERSIONS = ["0.3.0", "0.3.0",        "0.22.0",    "0.22.0",   "0.22.0"]
 DEPS_PATHS = [os.path.join("cmake-install/lib", shlib_name(lib)) for lib in DEPS_NAMES]
 
 # godot-cpp
@@ -100,12 +101,16 @@ library = env.SharedLibrary(
 env.Depends(sources, llama_cpp)  # Make sure to install llama.cpp before compiling extension
 
 defaults = []
-for path in DEPS_PATHS:
+for i, path in enumerate(DEPS_PATHS):
     env.Depends(path, llama_cpp)
-    # Install deps to bin
-    defaults.append(env.Install("bin/{}/".format(env["platform"]), path))
-    # Install deps to projectdir
-    defaults.append(env.Install("{}/bin/{}/".format(projectdir, env["platform"]), path))
+    full_version = DEPS_VERSIONS[i]
+    major_version = full_version[0]
+    for version in ["", "." + major_version, "." + full_version]:
+        path_version = path + version
+        # Install deps to bin
+        defaults.append(env.Install("bin/{}/".format(env["platform"]), path_version))
+        # Install deps to projectdir
+        defaults.append(env.Install("{}/bin/{}/".format(projectdir, env["platform"]), path_version))
 
 defaults.append(env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library))
 
