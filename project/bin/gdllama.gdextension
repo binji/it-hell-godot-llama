@@ -8,6 +8,10 @@ reloadable = false
 ; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.
 linux.x86_64.debug = "./linux/libit_hell_llama.linux.template_debug.x86_64.so"
 linux.x86_64.release = "./linux/libit_hell_llama.linux.template_release.x86_64.so"
+macos.debug = "./macos/libit_hell_llama.macos.template_debug.dylib"
+macos.release = "./macos/libit_hell_llama.macos.template_release.dylib"
+windows.x86_64.debug = "./windows/it_hell_llama.windows.template_debug.x86_64.dll"
+windows.x86_64.release = "./windows/it_hell_llama.windows.template_release.x86_64.dll"
 
 [dependencies]
 linux.x86_64.debug = {
@@ -23,4 +27,32 @@ linux.x86_64.release = {
   "res://bin/linux/libggml.so": "",
   "res://bin/linux/libllama-common.so": "",
   "res://bin/linux/libllama.so": ""
+}
+macos.debug = {
+  "res://bin/macos/libggml-base.dylib": "Contents/Frameworks",
+  "res://bin/macos/libggml-cpu.dylib": "Contents/Frameworks",
+  "res://bin/macos/libggml.dylib": "Contents/Frameworks",
+  "res://bin/macos/libllama-common.dylib": "Contents/Frameworks",
+  "res://bin/macos/libllama.dylib": "Contents/Frameworks"
+}
+macos.release = {
+  "res://bin/macos/libggml-base.dylib": "Contents/Frameworks",
+  "res://bin/macos/libggml-cpu.dylib": "Contents/Frameworks",
+  "res://bin/macos/libggml.dylib": "Contents/Frameworks",
+  "res://bin/macos/libllama-common.dylib": "Contents/Frameworks",
+  "res://bin/macos/libllama.dylib": "Contents/Frameworks"
+}
+windows.x86_64.debug = {
+  "res://bin/windows/ggml-base.dll": "",
+  "res://bin/windows/ggml-cpu.dll": "",
+  "res://bin/windows/ggml.dll": "",
+  "res://bin/windows/llama-common.dll": "",
+  "res://bin/windows/llama.dll": ""
+}
+windows.x86_64.release = {
+  "res://bin/windows/ggml-base.dll": "",
+  "res://bin/windows/ggml-cpu.dll": "",
+  "res://bin/windows/ggml.dll": "",
+  "res://bin/windows/llama-common.dll": "",
+  "res://bin/windows/llama.dll": ""
 }
