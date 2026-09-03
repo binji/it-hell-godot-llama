@@ -53,6 +53,12 @@ jobs:
       #  run: |
       #    clang-format src/** --dry-run --Werror
 
+      - name: Get latest CMake and Ninja
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: latestrc
+          ninjaVersion: latest
+
       # Add linux x86_32 toolchain
       - name: Install multilib support
         if: ${{ matrix.target.platform == 'linux' && matrix.target.arch == 'x86_32' }}
