@@ -64,7 +64,6 @@ env.Append(LIBPATH=["cmake-install/lib"])
 # Install needed llama.cpp libraries to bin
 DEPS_NAMES =    ["llama", "llama-common", "ggml-base", "ggml-cpu", "ggml"]
 DEPS_VERSIONS = ["0.3.0", "0.3.0",        "0.22.0",    "0.22.0",   "0.22.0"]
-DEPS_PATHS = [os.path.join("cmake-install/lib", shlib_name(lib)) for lib in DEPS_NAMES]
 
 # godot-cpp
 if not (os.path.isdir("godot-cpp") and os.listdir("godot-cpp")):
@@ -103,11 +102,15 @@ library = env.SharedLibrary(
 env.Depends(sources, llama_cpp)  # Make sure to install llama.cpp before compiling extension
 
 defaults = []
-for i, path in enumerate(DEPS_PATHS):
+for i, name in enumerate(DEPS_NAMES):
     full_version = DEPS_VERSIONS[i]
     major_version = full_version[0]
     for version in ["", "." + major_version, "." + full_version]:
-        path_version = path + version
+        if env["platform"] == "macos":
+            name_version = shlib_name(name, version)
+        else:
+            name_version = shlib_name(name) + version
+        path_version = os.path.join("cmake-install/lib", name_version)
         env.Depends(path_version, llama_cpp)
         # Install deps to bin
         defaults.append(env.Install("bin/{}/".format(env["platform"]), path_version))
