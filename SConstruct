@@ -7,12 +7,15 @@ from methods import print_error
 libname = "it_hell_llama"
 projectdir = "project"
 
+CUDA_PATH = r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3"
+
 localEnv = Environment(
     tools=["default"],
     PLATFORM="",
     ENV={
         'HOME': os.environ.get('HOME'),
         'PATH': os.environ.get('PATH'),
+        'CUDA_PATH': CUDA_PATH,
     })
 
 # Build profiles can be used to decrease compile times.
@@ -65,7 +68,7 @@ if env["platform"] == "windows":
     llama_cpp_flags.extend([
         "GGML_CUDA=ON",
         "GGML_NATIVE=OFF",
-        "CUDAToolkit_ROOT=\"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.3\"",
+        f"CUDAToolkit_ROOT=\"{CUDA_PATH}\"",
     ])
 elif env["platform"] == "linux":
     llama_cpp_flags.append("GGML_VULKAN=ON")
