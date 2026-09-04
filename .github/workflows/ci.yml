@@ -52,6 +52,13 @@ jobs:
       #  shell: bash
       #  run: |
       #    clang-format src/** --dry-run --Werror
+      #
+
+      - name: Get CMake and Ninja
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: 4.3.4  # TODO: pin cmake version because of issue with FindCUDAToolkit?
+          ninjaVersion: latest
 
       # Add linux x86_32 toolchain
       - name: Install multilib support

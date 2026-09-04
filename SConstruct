@@ -65,7 +65,7 @@ if env["platform"] == "windows":
     llama_cpp_flags.extend([
         "GGML_CUDA=ON",
         "GGML_NATIVE=OFF",
-        "CUDAToolkit_ROOT=\"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.3\"",
+        "CUDAToolkit_ROOT=\"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.3\"",
     ])
 elif env["platform"] == "linux":
     llama_cpp_flags.append("GGML_VULKAN=ON")
