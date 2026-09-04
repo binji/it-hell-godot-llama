@@ -13,7 +13,8 @@ localEnv = Environment(
     ENV={
         'HOME': os.environ.get('HOME'),
         'PATH': os.environ.get('PATH'),
-        'CUDA_PATH': os.environ.get('CUDA_PATH'),
+        # TODO allow this to be configurable
+        'CUDA_PATH': r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3',
     })
 
 # Build profiles can be used to decrease compile times.
