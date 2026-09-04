@@ -13,6 +13,7 @@ localEnv = Environment(
     ENV={
         'HOME': os.environ.get('HOME'),
         'PATH': os.environ.get('PATH'),
+        'CUDA_PATH': os.environ.get('CUDA_PATH'),
     })
 
 # Build profiles can be used to decrease compile times.
