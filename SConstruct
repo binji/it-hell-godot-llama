@@ -62,7 +62,7 @@ llama_cpp_flags = [
     "LLAMA_BUILD_UI=OFF",
 ]
 if env["platform"] == "windows":
-    llama_cpp_flags.append("GGML_CUDA=ON")
+    llama_cpp_flags.extend(["GGML_CUDA=ON", "GGML_NATIVE=OFF"])
 elif env["platform"] == "linux":
     llama_cpp_flags.append("GGML_VULKAN=ON")
 
